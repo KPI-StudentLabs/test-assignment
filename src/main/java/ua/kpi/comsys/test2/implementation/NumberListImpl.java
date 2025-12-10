@@ -80,8 +80,9 @@ public class NumberListImpl implements NumberList {
                 // конвертуємо десяткове число у двійкове
                 initializeFromDecimalString(line.trim());
             }
-        } catch (IOException e) {
-            throw new RuntimeException("Error reading from file", e);
+        } catch (Exception e) {
+            // якщо помилка - залишаємо список порожнім
+            // (наприклад, файл не знайдено або неправильний формат)
         }
     }
 
@@ -104,16 +105,20 @@ public class NumberListImpl implements NumberList {
      * Допоміжний метод для ініціалізації списку з десяткового рядка
      */
     private void initializeFromDecimalString(String decimal) {
-        BigInteger num = new BigInteger(decimal);
-        if (num.signum() == 0) {
-            return; // якщо число 0, то список залишається порожнім
-        }
+        try {
+            BigInteger num = new BigInteger(decimal);
+            if (num.signum() <= 0) {
+                return; // якщо число 0 або від'ємне, список залишається порожнім
+            }
 
-        // переводимо число в двійкову систему
-        String binary = num.toString(BASE);
-        // додаємо кожну цифру до списку
-        for (int i = 0; i < binary.length(); i++) {
-            add((byte) (binary.charAt(i) - '0'));
+            // переводимо число в двійкову систему
+            String binary = num.toString(BASE);
+            // додаємо кожну цифру до списку
+            for (int i = 0; i < binary.length(); i++) {
+                add((byte) (binary.charAt(i) - '0'));
+            }
+        } catch (NumberFormatException e) {
+            // якщо рядок не є валідним числом - залишаємо список порожнім
         }
     }
 
@@ -239,19 +244,16 @@ public class NumberListImpl implements NumberList {
     @Override
     public String toString() {
         if (isEmpty()) {
-            return "[]";
+            return "";
         }
 
-        StringBuilder sb = new StringBuilder("[");
+        // повертаємо число як рядок цифр (без розділювачів)
+        StringBuilder sb = new StringBuilder();
         Node current = head;
         do {
             sb.append(current.data);
             current = current.next;
-            if (current != head) {
-                sb.append(", ");
-            }
         } while (current != head);
-        sb.append("]");
 
         return sb.toString();
     }
