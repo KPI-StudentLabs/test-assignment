@@ -62,8 +62,8 @@ clean:
 deps: $(JUNIT)
 
 $(JUNIT): | $(LIB_DIR)
-	wget -q https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/6.0.1/junit-platform-console-standalone-6.0.1.jar \
-	     -O $(JUNIT)
+	curl -fsSL https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/6.0.1/junit-platform-console-standalone-6.0.1.jar \
+	     -o $(JUNIT)
 	@echo "Downloaded JUnit Platform Console 6.0.1"
 
 $(LIB_DIR):
