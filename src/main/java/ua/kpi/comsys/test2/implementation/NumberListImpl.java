@@ -43,6 +43,7 @@ public class NumberListImpl implements NumberList {
 
     private Node head; // голова списку
     private int size; // розмір списку
+    private int currentBase; // поточна система числення цього списку
 
     /**
      * Клас для вузла списку
@@ -63,6 +64,7 @@ public class NumberListImpl implements NumberList {
     public NumberListImpl() {
         this.head = null;
         this.size = 0;
+        this.currentBase = BASE; // за замовчуванням використовуємо основну систему (двійкову)
     }
 
 
@@ -169,6 +171,7 @@ public class NumberListImpl implements NumberList {
 
         // створюємо новий список для трійкової системи
         NumberListImpl result = new NumberListImpl();
+        result.currentBase = ADDITIONAL_BASE; // встановлюємо трійкову систему для нового списку
         for (int i = 0; i < ternary.length(); i++) {
             result.add((byte) (ternary.charAt(i) - '0'));
         }
@@ -228,15 +231,15 @@ public class NumberListImpl implements NumberList {
         }
 
         // збираємо всі цифри в рядок
-        StringBuilder binary = new StringBuilder();
+        StringBuilder digits = new StringBuilder();
         Node current = head;
         do {
-            binary.append(current.data);
+            digits.append(current.data);
             current = current.next;
         } while (current != head);
 
-        // конвертуємо з двійкової в десяткову
-        BigInteger num = new BigInteger(binary.toString(), BASE);
+        // конвертуємо з поточної системи числення в десяткову
+        BigInteger num = new BigInteger(digits.toString(), currentBase);
         return num.toString();
     }
 
@@ -665,6 +668,7 @@ public class NumberListImpl implements NumberList {
 
         // створюємо новий список з елементів у заданому діапазоні
         NumberListImpl subList = new NumberListImpl();
+        subList.currentBase = this.currentBase; // зберігаємо ту саму систему числення
         for (int i = fromIndex; i < toIndex; i++) {
             subList.add(get(i));
         }
