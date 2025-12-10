@@ -7,28 +7,62 @@
 
 package ua.kpi.comsys.test2.implementation;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 import ua.kpi.comsys.test2.NumberList;
 
 /**
- * Custom implementation of INumberList interface.
- * Has to be implemented by each student independently.
+ * Реалізація кільцевого однонаправленого списку для зберігання чисел у двійковій системі.
+ * Кожен елемент списку зберігає одну двійкову цифру (0 або 1).
  *
- * @author Alexander Podrubailo
+ * @author Коваль Богдан Андрійович
+ * Група: ІС-31
+ * Номер залікової книжки: 10
  *
+ * Параметри завдання (на основі номера залікової 10):
+ * - С3 = 10 % 3 = 1: Кільцевий однонаправлений список
+ * - С5 = 10 % 5 = 0: Двійкова система числення (основа 2)
+ * - С7 = 10 % 7 = 3: Ціла частина від ділення
+ * - Додаткова система: (0+1) % 5 = 1: Трійкова система (основа 3)
  */
 public class NumberListImpl implements NumberList {
+
+    private static final int BASE = 2; // двійкова система
+    private static final int ADDITIONAL_BASE = 3; // трійкова система
+
+    private Node head; // голова списку
+    private int size; // розмір списку
+
+    /**
+     * Клас для вузла списку
+     */
+    private class Node {
+        Byte data; // дані вузла
+        Node next; // посилання на наступний елемент
+
+        Node(Byte data) {
+            this.data = data;
+            this.next = null;
+        }
+    }
 
     /**
      * Default constructor. Returns empty <tt>NumberListImpl</tt>
      */
     public NumberListImpl() {
-        // TODO Auto-generated method stub
+        this.head = null;
+        this.size = 0;
     }
 
 
@@ -39,7 +73,16 @@ public class NumberListImpl implements NumberList {
      * @param file - file where number is stored.
      */
     public NumberListImpl(File file) {
-        // TODO Auto-generated method stub
+        this();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line = reader.readLine();
+            if (line != null && !line.trim().isEmpty()) {
+                // конвертуємо десяткове число у двійкове
+                initializeFromDecimalString(line.trim());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading from file", e);
+        }
     }
 
 
@@ -50,7 +93,28 @@ public class NumberListImpl implements NumberList {
      * @param value - number in string notation.
      */
     public NumberListImpl(String value) {
-        // TODO Auto-generated method stub
+        this();
+        if (value != null && !value.trim().isEmpty()) {
+            // ініціалізуємо список з десяткового числа
+            initializeFromDecimalString(value.trim());
+        }
+    }
+
+    /**
+     * Допоміжний метод для ініціалізації списку з десяткового рядка
+     */
+    private void initializeFromDecimalString(String decimal) {
+        BigInteger num = new BigInteger(decimal);
+        if (num.signum() == 0) {
+            return; // якщо число 0, то список залишається порожнім
+        }
+
+        // переводимо число в двійкову систему
+        String binary = num.toString(BASE);
+        // додаємо кожну цифру до списку
+        for (int i = 0; i < binary.length(); i++) {
+            add((byte) (binary.charAt(i) - '0'));
+        }
     }
 
 
@@ -61,7 +125,11 @@ public class NumberListImpl implements NumberList {
      * @param file - file where number has to be stored.
      */
     public void saveList(File file) {
-        // TODO Auto-generated method stub
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write(toDecimalString());
+        } catch (IOException e) {
+            throw new RuntimeException("Error writing to file", e);
+        }
     }
 
 
@@ -71,8 +139,7 @@ public class NumberListImpl implements NumberList {
      * @return student's record book number.
      */
     public static int getRecordBookNumber() {
-        // TODO Auto-generated method stub
-        return 0;
+        return 10;
     }
 
 
@@ -85,8 +152,23 @@ public class NumberListImpl implements NumberList {
      * @return <tt>NumberListImpl</tt> in other scale of notation.
      */
     public NumberListImpl changeScale() {
-        // TODO Auto-generated method stub
-        return null;
+        if (isEmpty()) {
+            return new NumberListImpl();
+        }
+
+        // спочатку конвертуємо в десяткову систему
+        String decimal = toDecimalString();
+        BigInteger num = new BigInteger(decimal);
+        // потім переводимо в трійкову систему
+        String ternary = num.toString(ADDITIONAL_BASE);
+
+        // створюємо новий список для трійкової системи
+        NumberListImpl result = new NumberListImpl();
+        for (int i = 0; i < ternary.length(); i++) {
+            result.add((byte) (ternary.charAt(i) - '0'));
+        }
+
+        return result;
     }
 
 
@@ -94,15 +176,38 @@ public class NumberListImpl implements NumberList {
      * Returns new <tt>NumberListImpl</tt> which represents the result of
      * additional operation, defined by personal test assignment.<p>
      *
+     * Performs integer division (this / arg).
+     *
      * Does not impact the original list.
      *
-     * @param arg - second argument of additional operation
+     * @param arg - second argument of additional operation (divisor)
      *
-     * @return result of additional operation.
+     * @return result of additional operation (quotient).
      */
     public NumberListImpl additionalOperation(NumberList arg) {
-        // TODO Auto-generated method stub
-        return null;
+        // перевіряємо чи не ділимо на нуль
+        if (arg == null || arg.isEmpty()) {
+            throw new ArithmeticException("Division by zero");
+        }
+
+        NumberListImpl dividend = this; // ділене
+        NumberListImpl divisor = (NumberListImpl) arg; // дільник
+
+        // переводимо обидва числа в десяткову систему
+        String dividendDecimal = dividend.toDecimalString();
+        String divisorDecimal = divisor.toDecimalString();
+
+        BigInteger dividendNum = new BigInteger(dividendDecimal);
+        BigInteger divisorNum = new BigInteger(divisorDecimal);
+
+        if (divisorNum.signum() == 0) {
+            throw new ArithmeticException("Division by zero");
+        }
+
+        // виконуємо ділення та повертаємо результат
+        BigInteger quotient = dividendNum.divide(divisorNum);
+
+        return new NumberListImpl(quotient.toString());
     }
 
 
@@ -113,215 +218,669 @@ public class NumberListImpl implements NumberList {
      * @return string representation in <b>decimal</b> scale.
      */
     public String toDecimalString() {
-        // TODO Auto-generated method stub
-        return null;
+        if (isEmpty()) {
+            return "0";
+        }
+
+        // збираємо всі цифри в рядок
+        StringBuilder binary = new StringBuilder();
+        Node current = head;
+        do {
+            binary.append(current.data);
+            current = current.next;
+        } while (current != head);
+
+        // конвертуємо з двійкової в десяткову
+        BigInteger num = new BigInteger(binary.toString(), BASE);
+        return num.toString();
     }
 
 
     @Override
     public String toString() {
-        // TODO Auto-generated method stub
-        return null;
+        if (isEmpty()) {
+            return "[]";
+        }
+
+        StringBuilder sb = new StringBuilder("[");
+        Node current = head;
+        do {
+            sb.append(current.data);
+            current = current.next;
+            if (current != head) {
+                sb.append(", ");
+            }
+        } while (current != head);
+        sb.append("]");
+
+        return sb.toString();
     }
 
 
     @Override
     public boolean equals(Object o) {
-        // TODO Auto-generated method stub
-        return false;
+        if (this == o) return true;
+        if (!(o instanceof NumberList)) return false;
+
+        NumberList other = (NumberList) o;
+        if (this.size() != other.size()) return false;
+
+        // порівнюємо елемент за елементом
+        Iterator<Byte> it1 = this.iterator();
+        Iterator<Byte> it2 = other.iterator();
+
+        while (it1.hasNext()) {
+            if (!it1.next().equals(it2.next())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
     @Override
     public int size() {
-        // TODO Auto-generated method stub
-        return 0;
+        return size;
     }
 
 
     @Override
     public boolean isEmpty() {
-        // TODO Auto-generated method stub
-        return false;
+        return size == 0;
     }
 
 
     @Override
     public boolean contains(Object o) {
-        // TODO Auto-generated method stub
+        if (isEmpty() || !(o instanceof Byte)) {
+            return false;
+        }
+
+        Node current = head;
+        do {
+            if (current.data.equals(o)) {
+                return true;
+            }
+            current = current.next;
+        } while (current != head);
+
         return false;
     }
 
 
     @Override
     public Iterator<Byte> iterator() {
-        // TODO Auto-generated method stub
-        return null;
+        return new Iterator<Byte>() {
+            private Node current = head;
+            private int count = 0; // лічильник пройдених елементів
+
+            @Override
+            public boolean hasNext() {
+                return count < size;
+            }
+
+            @Override
+            public Byte next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                Byte data = current.data;
+                current = current.next; // переходимо до наступного
+                count++;
+                return data;
+            }
+        };
     }
 
 
     @Override
     public Object[] toArray() {
-        // TODO Auto-generated method stub
-        return null;
+        Object[] array = new Object[size];
+        int index = 0;
+
+        if (!isEmpty()) {
+            Node current = head;
+            do {
+                array[index++] = current.data;
+                current = current.next;
+            } while (current != head);
+        }
+
+        return array;
     }
 
 
     @Override
     public <T> T[] toArray(T[] a) {
-        // TODO Auto-generated method stub
+        // Not implemented as per assignment requirements
         return null;
     }
 
 
     @Override
     public boolean add(Byte e) {
-        // TODO Auto-generated method stub
-        return false;
+        if (e == null) {
+            throw new NullPointerException("Null elements are not permitted");
+        }
+
+        Node newNode = new Node(e);
+
+        if (isEmpty()) {
+            // якщо список порожній, створюємо перший елемент
+            head = newNode;
+            newNode.next = head; // вказуємо на себе (кільце)
+        } else {
+            // знаходимо останній елемент
+            Node tail = getTail();
+            tail.next = newNode;
+            newNode.next = head; // замикаємо кільце
+        }
+
+        size++;
+        return true;
     }
 
 
     @Override
     public boolean remove(Object o) {
-        // TODO Auto-generated method stub
+        if (isEmpty() || !(o instanceof Byte)) {
+            return false;
+        }
+
+        // якщо видаляємо перший елемент
+        if (head.data.equals(o)) {
+            if (size == 1) {
+                head = null;
+            } else {
+                Node tail = getTail();
+                head = head.next;
+                tail.next = head; // оновлюємо кільце
+            }
+            size--;
+            return true;
+        }
+
+        // шукаємо елемент для видалення
+        Node current = head;
+        do {
+            if (current.next.data.equals(o)) {
+                current.next = current.next.next;
+                size--;
+                return true;
+            }
+            current = current.next;
+        } while (current != head);
+
         return false;
     }
 
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        for (Object item : c) {
+            if (!contains(item)) {
+                return false;
+            }
+        }
+        return true;
     }
 
 
     @Override
     public boolean addAll(Collection<? extends Byte> c) {
-        // TODO Auto-generated method stub
-        return false;
+        boolean modified = false;
+        for (Byte item : c) {
+            if (add(item)) {
+                modified = true;
+            }
+        }
+        return modified;
     }
 
 
     @Override
     public boolean addAll(int index, Collection<? extends Byte> c) {
-        // TODO Auto-generated method stub
-        return false;
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+
+        boolean modified = false;
+        for (Byte item : c) {
+            add(index++, item);
+            modified = true;
+        }
+        return modified;
     }
 
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        boolean modified = false;
+        for (Object item : c) {
+            while (remove(item)) {
+                modified = true;
+            }
+        }
+        return modified;
     }
 
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        boolean modified = false;
+        Iterator<Byte> it = iterator();
+        while (it.hasNext()) {
+            if (!c.contains(it.next())) {
+                it.remove();
+                modified = true;
+            }
+        }
+        return modified;
     }
 
 
     @Override
     public void clear() {
-        // TODO Auto-generated method stub
-
+        head = null;
+        size = 0;
     }
 
 
     @Override
     public Byte get(int index) {
-        // TODO Auto-generated method stub
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+
+        Node current = head;
+        for (int i = 0; i < index; i++) {
+            current = current.next;
+        }
+
+        return current.data;
     }
 
 
     @Override
     public Byte set(int index, Byte element) {
-        // TODO Auto-generated method stub
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        if (element == null) {
+            throw new NullPointerException("Null elements are not permitted");
+        }
+
+        Node current = head;
+        for (int i = 0; i < index; i++) {
+            current = current.next;
+        }
+
+        Byte oldValue = current.data;
+        current.data = element;
+        return oldValue;
     }
 
 
     @Override
     public void add(int index, Byte element) {
-        // TODO Auto-generated method stub
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        if (element == null) {
+            throw new NullPointerException("Null elements are not permitted");
+        }
 
+        // якщо додаємо на початок списку
+        if (index == 0) {
+            Node newNode = new Node(element);
+            if (isEmpty()) {
+                head = newNode;
+                newNode.next = head; // вказуємо сам на себе
+            } else {
+                Node tail = getTail();
+                newNode.next = head;
+                head = newNode;
+                tail.next = head; // замикаємо кільце
+            }
+            size++;
+            return;
+        }
+
+        // знаходимо елемент перед позицією вставки
+        Node current = head;
+        for (int i = 0; i < index - 1; i++) {
+            current = current.next;
+        }
+
+        // вставляємо новий елемент
+        Node newNode = new Node(element);
+        newNode.next = current.next;
+        current.next = newNode;
+        size++;
     }
 
 
     @Override
     public Byte remove(int index) {
-        // TODO Auto-generated method stub
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+
+        Byte removedValue;
+
+        // якщо видаляємо перший елемент
+        if (index == 0) {
+            removedValue = head.data;
+            if (size == 1) {
+                head = null; // список стає порожнім
+            } else {
+                Node tail = getTail();
+                head = head.next;
+                tail.next = head; // підтримуємо кільцеву структуру
+            }
+            size--;
+            return removedValue;
+        }
+
+        // знаходимо елемент перед тим, який треба видалити
+        Node current = head;
+        for (int i = 0; i < index - 1; i++) {
+            current = current.next;
+        }
+
+        // зберігаємо значення та видаляємо елемент
+        removedValue = current.next.data;
+        current.next = current.next.next;
+        size--;
+
+        return removedValue;
     }
 
 
     @Override
     public int indexOf(Object o) {
-        // TODO Auto-generated method stub
-        return 0;
+        if (isEmpty() || !(o instanceof Byte)) {
+            return -1;
+        }
+
+        Node current = head;
+        int index = 0;
+        do {
+            if (current.data.equals(o)) {
+                return index;
+            }
+            current = current.next;
+            index++;
+        } while (current != head);
+
+        return -1;
     }
 
 
     @Override
     public int lastIndexOf(Object o) {
-        // TODO Auto-generated method stub
-        return 0;
+        if (isEmpty() || !(o instanceof Byte)) {
+            return -1;
+        }
+
+        Node current = head;
+        int index = 0;
+        int lastIndex = -1;
+
+        do {
+            if (current.data.equals(o)) {
+                lastIndex = index;
+            }
+            current = current.next;
+            index++;
+        } while (current != head);
+
+        return lastIndex;
     }
 
 
     @Override
     public ListIterator<Byte> listIterator() {
-        // TODO Auto-generated method stub
-        return null;
+        return new NumberListIterator(0);
     }
 
 
     @Override
     public ListIterator<Byte> listIterator(int index) {
-        // TODO Auto-generated method stub
-        return null;
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        return new NumberListIterator(index);
     }
 
 
     @Override
     public List<Byte> subList(int fromIndex, int toIndex) {
-        // TODO Auto-generated method stub
-        return null;
+        if (fromIndex < 0 || toIndex > size || fromIndex > toIndex) {
+            throw new IndexOutOfBoundsException("fromIndex: " + fromIndex + ", toIndex: " + toIndex + ", Size: " + size);
+        }
+
+        // створюємо новий список з елементів у заданому діапазоні
+        NumberListImpl subList = new NumberListImpl();
+        for (int i = fromIndex; i < toIndex; i++) {
+            subList.add(get(i));
+        }
+
+        return subList;
     }
 
 
     @Override
     public boolean swap(int index1, int index2) {
-        // TODO Auto-generated method stub
-        return false;
+        if (index1 < 0 || index1 >= size || index2 < 0 || index2 >= size) {
+            return false;
+        }
+
+        if (index1 == index2) {
+            return true; // якщо індекси однакові, нічого не робимо
+        }
+
+        // міняємо елементи місцями
+        Byte temp = get(index1);
+        set(index1, get(index2));
+        set(index2, temp);
+
+        return true;
     }
 
 
     @Override
     public void sortAscending() {
-        // TODO Auto-generated method stub
+        if (size <= 1) {
+            return;
+        }
+
+        // сортування бульбашкою (по зростанню)
+        for (int i = 0; i < size - 1; i++) {
+            for (int j = 0; j < size - i - 1; j++) {
+                if (get(j) > get(j + 1)) {
+                    swap(j, j + 1);
+                }
+            }
+        }
     }
 
 
     @Override
     public void sortDescending() {
-        // TODO Auto-generated method stub
+        if (size <= 1) {
+            return;
+        }
+
+        // сортування бульбашкою (по спаданню)
+        for (int i = 0; i < size - 1; i++) {
+            for (int j = 0; j < size - i - 1; j++) {
+                if (get(j) < get(j + 1)) {
+                    swap(j, j + 1);
+                }
+            }
+        }
     }
 
 
     @Override
     public void shiftLeft() {
-        // TODO Auto-generated method stub
+        if (size <= 1) {
+            return;
+        }
 
+        // циклічний зсув вліво - просто переміщуємо голову на один вузол вперед
+        head = head.next;
     }
 
 
     @Override
     public void shiftRight() {
-        // TODO Auto-generated method stub
+        if (size <= 1) {
+            return;
+        }
 
+        // циклічний зсув вправо - переміщуємо голову на останній елемент
+        head = getTail();
+    }
+
+    /**
+     * Допоміжний метод для отримання останнього вузла списку
+     */
+    private Node getTail() {
+        if (isEmpty()) {
+            return null;
+        }
+
+        // йдемо по списку поки не дійдемо до останнього елемента
+        Node current = head;
+        while (current.next != head) {
+            current = current.next;
+        }
+        return current;
+    }
+
+    /**
+     * Реалізація ListIterator для обходу списку
+     */
+    private class NumberListIterator implements ListIterator<Byte> {
+        private Node current;
+        private Node lastReturned;
+        private int currentIndex;
+        private int expectedSize;
+
+        NumberListIterator(int index) {
+            this.currentIndex = index;
+            this.expectedSize = size;
+            this.lastReturned = null;
+
+            if (isEmpty()) {
+                current = null;
+            } else if (index == size) {
+                current = null;
+            } else {
+                // переходимо до потрібної позиції
+                current = head;
+                for (int i = 0; i < index; i++) {
+                    current = current.next;
+                }
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return currentIndex < size;
+        }
+
+        @Override
+        public Byte next() {
+            checkModification();
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+
+            lastReturned = current;
+            Byte data = current.data;
+            current = current.next;
+            currentIndex++;
+
+            return data;
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return currentIndex > 0;
+        }
+
+        @Override
+        public Byte previous() {
+            checkModification();
+            if (!hasPrevious()) {
+                throw new NoSuchElementException();
+            }
+
+            currentIndex--;
+            // знаходимо попередній елемент
+            if (currentIndex == 0) {
+                current = head;
+            } else {
+                current = head;
+                for (int i = 0; i < currentIndex; i++) {
+                    current = current.next;
+                }
+            }
+            lastReturned = current;
+
+            return current.data;
+        }
+
+        @Override
+        public int nextIndex() {
+            return currentIndex;
+        }
+
+        @Override
+        public int previousIndex() {
+            return currentIndex - 1;
+        }
+
+        @Override
+        public void remove() {
+            checkModification();
+            if (lastReturned == null) {
+                throw new IllegalStateException();
+            }
+
+            NumberListImpl.this.remove(currentIndex - 1);
+            currentIndex--;
+            expectedSize--;
+            lastReturned = null;
+        }
+
+        @Override
+        public void set(Byte e) {
+            checkModification();
+            if (lastReturned == null) {
+                throw new IllegalStateException();
+            }
+
+            lastReturned.data = e;
+        }
+
+        @Override
+        public void add(Byte e) {
+            checkModification();
+            NumberListImpl.this.add(currentIndex, e);
+            currentIndex++;
+            expectedSize++;
+            lastReturned = null;
+        }
+
+        private void checkModification() {
+            if (expectedSize != size) {
+                throw new java.util.ConcurrentModificationException();
+            }
+        }
     }
 }
